@@ -134,6 +134,8 @@
         <div class="sc-title">
           <svg class="shape-preview" viewBox="0 0 28 36">
             <polygon points="4,1 24.5,1 24.5,35 8.1,35 8.1,29.7 4,29.7" fill="#1f5f8b" fill-opacity="0.4" stroke="#1f5f8b" stroke-width="1.5"/>
+            <rect x="4.75" y="1.75" width="3.35" height="8.7" fill="#fff" fill-opacity="0.85"/>
+            <line x1="8.1" y1="1" x2="8.1" y2="29.7" stroke="#1f5f8b" stroke-width="0.8"/>
           </svg>
           Pool House + Breezeway
         </div>
@@ -162,10 +164,11 @@
         <label style="margin-top:8px;">Label</label>
         <input type="text" id="bp-label" value="Pool House">
         <div style="font-size:11px;color:#666;line-height:1.6;margin-bottom:8px;">
-          From foundation plan (slab edges):<br>
-          Rear porch slab: 27′-2″ × 12′-6″ (top)<br>
-          Pool house + 6′-0″ breezeway: 25′-8″ deep<br>
-          Entry porch slab: 21′-8″ × 7′-0″ (bottom)
+          Main building (roofed): 21′-8″ × 45′-2″<br>
+          &nbsp;· rear porch 12′-6″ · pool house 25′-8″ · entry porch 7′-0″<br>
+          Breezeway (roofed): 5′-6″ × 25′-8″, left side<br>
+          Open slab (hatched, no roof): 5′-6″ × 12′-6″, beside rear porch<br>
+          Overall slab: 27′-2″ × 45′-2″
         </div>
       </div>
 
@@ -208,7 +211,9 @@
       <input type="color" id="sel-color" oninput="updateSelected()">
       <label>Opacity</label>
       <input type="number" id="sel-opacity" oninput="updateSelected()" min="10" max="100" step="5">
+      <button class="btn" onclick="deselectBuilding()" style="margin-bottom:6px;">✓ Done Editing</button>
       <button class="btn btn-danger" onclick="deleteSelected()">Remove Building</button>
+      <div style="font-size:11px;color:#888;margin-top:6px;">Tip: click an empty spot on the map or press Esc to finish editing.</div>
     </div>
 
     <div class="sidebar-section">
@@ -269,7 +274,7 @@
       <span id="building-count">0 buildings</span>
       <span id="zoom-level">100%</span>
     </div>
-    <div id="placing-hint">Click on the map to place the building</div>
+    <div id="placing-hint">Click on the map to place the building · Esc to cancel</div>
     <div id="measure-hint">Click first point &nbsp;·&nbsp; ESC to cancel</div>
   </div>
 </div>
@@ -295,12 +300,16 @@ const PH_H = PH_TOP + PH_MID + PH_BOT, PH_ENTRY_X = PH_W - PH_ENTRY_W;
 const POOLHOUSE_PTS_FT = [
   [0, 0], [PH_W, 0], [PH_W, PH_H], [PH_ENTRY_X, PH_H], [PH_ENTRY_X, PH_TOP+PH_MID], [0, PH_TOP+PH_MID]
 ];
-// Interior divider lines (dashed): porch edges and the breezeway wall
+// Main building (roofed) is 21'-8" x 45'-2" on the right; the 5'-6" strip on the left is the
+// covered breezeway (25'-8") plus an open, uncovered slab beside the rear porch.
+// Interior divider lines (dashed): main building edge, porch edges, breezeway end
 const POOLHOUSE_LINES_FT = [
+  [PH_ENTRY_X, 0, PH_ENTRY_X, PH_TOP+PH_MID],
   [0, PH_TOP, PH_W, PH_TOP],
-  [PH_ENTRY_X, PH_TOP+PH_MID, PH_W, PH_TOP+PH_MID],
-  [PH_BW, PH_TOP, PH_BW, PH_TOP+PH_MID]
+  [PH_ENTRY_X, PH_TOP+PH_MID, PH_W, PH_TOP+PH_MID]
 ];
+// Uncovered areas (drawn hatched): [x, y, w, h] in ft
+const POOLHOUSE_OPEN_FT = [[0, 0, PH_ENTRY_X, PH_TOP]];
 const GARAGE_PTS_FT = [[0, 0], [18.0833, 0], [18.0833, 20.25], [25.0833, 20.25], [25.0833, 40.5], [0, 40.5]];
 
 const img = document.getElementById('survey-img');
@@ -352,7 +361,7 @@ function startPlacing() {
   if (activeShape === 'garage') {
     placing = { type: 'polygon', label: document.getElementById('bg-label').value || 'Garage', pts: GARAGE_PTS_FT.map(p => [...p]), color, opacity, rotation };
   } else if (activeShape === 'poolhouse') {
-    placing = { type: 'polygon', label: document.getElementById('bp-label').value || 'Pool House', pts: POOLHOUSE_PTS_FT.map(p => [...p]), lines: POOLHOUSE_LINES_FT.map(l => [...l]), color, opacity, rotation };
+    placing = { type: 'polygon', label: document.getElementById('bp-label').value || 'Pool House', pts: POOLHOUSE_PTS_FT.map(p => [...p]), lines: POOLHOUSE_LINES_FT.map(l => [...l]), open: POOLHOUSE_OPEN_FT.map(z => [...z]), color, opacity, rotation };
   } else {
     placing = { type: 'rect', label: document.getElementById('b-label').value || 'Building', wFt: parseFloat(document.getElementById('b-width').value)||30, dFt: parseFloat(document.getElementById('b-depth').value)||40, color, opacity, rotation };
   }
@@ -381,7 +390,11 @@ wrapper.addEventListener('click', (e) => {
 });
 
 // ── RENDER ──
-function renderAll() { svg.innerHTML = ''; buildings.forEach(renderBuilding); }
+function renderAll() {
+  svg.innerHTML = `<defs><pattern id="hatch-open" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+    <rect width="6" height="6" fill="#fff" fill-opacity="0.55"/><line x1="0" y1="0" x2="0" y2="6" stroke="#555" stroke-width="1.2"/></pattern></defs>`;
+  buildings.forEach(renderBuilding);
+}
 
 function renderBuilding(b) {
   const cx = b.cx * scale, cy = b.cy * scale;
@@ -451,6 +464,13 @@ function renderPolygon(g, b, cx, cy, isSelected) {
   poly.addEventListener('mousedown', startDrag);
   poly.addEventListener('click', (e) => { e.stopPropagation(); selectBuilding(b.id); });
   g.appendChild(poly);
+  (b.open || []).forEach(([zx, zy, zw, zh]) => {
+    const zr = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    zr.setAttribute('x', ox + zx*scaleF); zr.setAttribute('y', oy + zy*scaleF);
+    zr.setAttribute('width', zw*scaleF); zr.setAttribute('height', zh*scaleF);
+    zr.setAttribute('fill', 'url(#hatch-open)'); zr.setAttribute('pointer-events', 'none');
+    g.appendChild(zr);
+  });
   (b.lines || []).forEach(([x1, y1, x2, y2]) => {
     const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     ln.setAttribute('x1', ox + x1*scaleF); ln.setAttribute('y1', oy + y1*scaleF);
@@ -579,6 +599,7 @@ function startResizePoly(e) {
   const sx = e.clientX, sy = e.clientY, oW = b.bbW, oH = b.bbH;
   const oPts = b.pts.map(p => [p[0], p[1]]); // snapshot current shape
   const oLines = (b.lines || []).map(l => [...l]);
+  const oOpen = (b.open || []).map(z => [...z]);
   const onMove = ev => {
     const dxFt = (ev.clientX-sx)/scale/pxPer30ft*30;
     const dyFt = (ev.clientY-sy)/scale/pxPer30ft*30;
@@ -587,6 +608,7 @@ function startResizePoly(e) {
     const s = (scaleX+scaleY)/2; // uniform scale
     b.pts = oPts.map(([x,y]) => [x*s, y*s]);
     if (b.lines) b.lines = oLines.map(([x1,y1,x2,y2]) => [x1*s, y1*s, x2*s, y2*s]);
+    if (b.open) b.open = oOpen.map(([x,y,w,h]) => [x*s, y*s, w*s, h*s]);
     b.bbW = oW*s; b.bbH = oH*s;
     if (b.id === selectedId) { document.getElementById('sel-width').value=b.bbW.toFixed(1); document.getElementById('sel-depth').value=b.bbH.toFixed(1); }
     renderAll();
@@ -637,12 +659,19 @@ function selectBuilding(id) {
   renderAll(); updateList();
 }
 
-svg.addEventListener('click', e => {
-  if (e.target === svg || e.target.tagName === 'svg') {
-    selectedId = null;
-    document.getElementById('selected-section').style.display = 'none';
-    renderAll(); updateList();
-  }
+function deselectBuilding() {
+  if (selectedId === null) return;
+  selectedId = null;
+  document.getElementById('selected-section').style.display = 'none';
+  renderAll(); updateList();
+}
+
+// Clicking empty map (not a building or handle) finishes editing.
+// The overlay SVG ignores pointer events, so listen on the map wrapper instead.
+wrapper.addEventListener('click', e => {
+  if (placing || measureMode) return;
+  if (e.target.closest && e.target.closest('.b-poly, .building-rect, .resize-handle, .rotate-handle')) return;
+  deselectBuilding();
 });
 
 function updateSelected() {
@@ -662,6 +691,7 @@ function updateSelected() {
     if (sx !== 1 || sy !== 1) {
       b.pts = b.pts.map(([x,y]) => [x*sx, y*sy]);
       if (b.lines) b.lines = b.lines.map(([x1,y1,x2,y2]) => [x1*sx, y1*sy, x2*sx, y2*sy]);
+      if (b.open) b.open = b.open.map(([x,y,w,h]) => [x*sx, y*sy, w*sx, h*sy]);
       b.bbW *= sx; b.bbH *= sy;
     }
   } else {
@@ -786,6 +816,11 @@ wrapper.addEventListener('click', e => {
 }, true); // use capture so it fires before building click handlers
 
 document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !measureMode) {
+    if (placing) { placing = null; document.getElementById('placing-hint').style.display = 'none'; }
+    else deselectBuilding();
+    return;
+  }
   if (e.key === 'Escape' && measureMode) {
     measurePt1 = null;
     document.getElementById('measure-hint').textContent = 'Click first point · ESC to cancel';
