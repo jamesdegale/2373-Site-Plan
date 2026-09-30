@@ -127,7 +127,7 @@
           </svg>
           L-Shape
         </div>
-        <div class="sc-dims">25′-1″ × 40′-6″ · Garage/Cottage</div>
+        <div class="sc-dims">25′-1″ × 40′-6″ · Garage</div>
       </div>
 
       <div id="rect-options">
@@ -140,7 +140,7 @@
       </div>
       <div id="garage-options" style="display:none">
         <label style="margin-top:8px;">Label</label>
-        <input type="text" id="bg-label" value="Garage / Cottage">
+        <input type="text" id="bg-label" value="Garage">
         <div style="font-size:11px;color:#666;line-height:1.6;margin-bottom:8px;">
           Workshop: 20′-1″ × 8′-0″<br>
           Garage: 24′-1″ × 26′-8″<br>
@@ -265,7 +265,7 @@ let nextId = 1;
 let activeShape = 'rect';
 
 // L-shape polygon points in feet, relative to bounding-box top-left
-// Garage/Cottage from uploaded floor plan
+// Garage from uploaded floor plan
 const GARAGE_PTS_FT = [[0, 0], [18.0833, 0], [18.0833, 20.25], [25.0833, 20.25], [25.0833, 40.5], [0, 40.5]];
 
 const img = document.getElementById('survey-img');
@@ -313,7 +313,7 @@ function startPlacing() {
   const opacity = parseFloat(document.getElementById('b-opacity').value) / 100;
   const rotation = parseFloat(document.getElementById('b-rotation').value) || 0;
   if (activeShape === 'garage') {
-    placing = { type: 'polygon', label: document.getElementById('bg-label').value || 'Garage / Cottage', pts: GARAGE_PTS_FT, color, opacity, rotation };
+    placing = { type: 'polygon', label: document.getElementById('bg-label').value || 'Garage', pts: GARAGE_PTS_FT, color, opacity, rotation };
   } else {
     placing = { type: 'rect', label: document.getElementById('b-label').value || 'Building', wFt: parseFloat(document.getElementById('b-width').value)||30, dFt: parseFloat(document.getElementById('b-depth').value)||40, color, opacity, rotation };
   }
