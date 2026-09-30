@@ -130,6 +130,16 @@
         <div class="sc-dims">25′-1″ × 40′-6″ · Garage</div>
       </div>
 
+      <div class="shape-card" id="shape-poolhouse" onclick="selectShape('poolhouse')">
+        <div class="sc-title">
+          <svg class="shape-preview" viewBox="0 0 28 36">
+            <polygon points="8.6,1 24.5,1 24.5,35 8.6,35 8.6,30 4,30 4,10.2 8.6,10.2" fill="#1f5f8b" fill-opacity="0.4" stroke="#1f5f8b" stroke-width="1.5"/>
+          </svg>
+          Pool House + Breezeway
+        </div>
+        <div class="sc-dims">26′-8″ × 44′-2″ · 1,066 sf</div>
+      </div>
+
       <div id="rect-options">
         <label style="margin-top:8px;">Label</label>
         <input type="text" id="b-label" value="Building A">
@@ -145,6 +155,17 @@
           Workshop: 20′-1″ × 8′-0″<br>
           Garage: 24′-1″ × 26′-8″<br>
           Stair tower right, Mech bottom-left
+        </div>
+      </div>
+
+      <div id="poolhouse-options" style="display:none">
+        <label style="margin-top:8px;">Label</label>
+        <input type="text" id="bp-label" value="Pool House">
+        <div style="font-size:11px;color:#666;line-height:1.6;margin-bottom:8px;">
+          Pool house: 20′-8″ × 25′-8″ (530 sf)<br>
+          Covered rear porch: 20′-8″ × 12′-0″ (top)<br>
+          Entry porch: 20′-8″ × 6′-6″ (bottom)<br>
+          Breezeway: 6′-0″ × 25′-8″ (left side)
         </div>
       </div>
 
@@ -171,7 +192,7 @@
         <div><label>Width (ft)</label><input type="number" id="sel-width" oninput="updateSelected()" min="1" step="1"></div>
         <div><label>Depth (ft)</label><input type="number" id="sel-depth" oninput="updateSelected()" min="1" step="1"></div>
       </div>
-      <div id="sel-dims-note" style="display:none;font-size:11px;color:#888;margin-bottom:8px;">L-shape — overall bounding box shown</div>
+      <div id="sel-dims-note" style="display:none;font-size:11px;color:#888;margin-bottom:8px;">Custom shape — overall size shown; edits stretch the whole shape</div>
       <label>Rotation (°)</label>
       <div class="rotation-row">
         <input type="number" id="sel-rotation" oninput="updateSelected()" min="-180" max="180" step="0.5">
@@ -221,7 +242,7 @@
       <h2>How To Use</h2>
       <div class="instructions"><ol>
         <li>Calibrate scale from the survey bar.</li>
-        <li>Choose the Rectangle or L-Shape.</li>
+        <li>Choose the Rectangle, L-Shape, or Pool House.</li>
         <li>Click "Place on Map" then click to drop it.</li>
         <li>Drag to reposition.</li>
         <li>Select to rotate via input, slider, or map handle.</li>
@@ -266,6 +287,19 @@ let activeShape = 'rect';
 
 // L-shape polygon points in feet, relative to bounding-box top-left
 // Garage from uploaded floor plan
+// Pool house from floor plan: 20'-8" wide main block (rear porch 12'-0", enclosed 25'-8", entry porch 6'-6")
+// plus a 6'-0" breezeway along the left side of the enclosed portion
+const PH_W = 20 + 8/12, PH_BW = 6, PH_TOP = 12, PH_MID = 25 + 8/12, PH_BOT = 6.5;
+const POOLHOUSE_PTS_FT = [
+  [PH_BW, 0], [PH_BW+PH_W, 0], [PH_BW+PH_W, PH_TOP+PH_MID+PH_BOT], [PH_BW, PH_TOP+PH_MID+PH_BOT],
+  [PH_BW, PH_TOP+PH_MID], [0, PH_TOP+PH_MID], [0, PH_TOP], [PH_BW, PH_TOP]
+];
+// Interior divider lines (dashed): porch edges and the breezeway wall
+const POOLHOUSE_LINES_FT = [
+  [PH_BW, PH_TOP, PH_BW+PH_W, PH_TOP],
+  [PH_BW, PH_TOP+PH_MID, PH_BW+PH_W, PH_TOP+PH_MID],
+  [PH_BW, PH_TOP, PH_BW, PH_TOP+PH_MID]
+];
 const GARAGE_PTS_FT = [[0, 0], [18.0833, 0], [18.0833, 20.25], [25.0833, 20.25], [25.0833, 40.5], [0, 40.5]];
 
 const img = document.getElementById('survey-img');
@@ -298,6 +332,8 @@ function selectShape(s) {
   document.getElementById('shape-garage').classList.toggle('active', s === 'garage');
   document.getElementById('rect-options').style.display = s === 'rect' ? 'block' : 'none';
   document.getElementById('garage-options').style.display = s === 'garage' ? 'block' : 'none';
+  document.getElementById('shape-poolhouse').classList.toggle('active', s === 'poolhouse');
+  document.getElementById('poolhouse-options').style.display = s === 'poolhouse' ? 'block' : 'none';
 }
 
 function nudgeNewRot(d) {
@@ -313,7 +349,9 @@ function startPlacing() {
   const opacity = parseFloat(document.getElementById('b-opacity').value) / 100;
   const rotation = parseFloat(document.getElementById('b-rotation').value) || 0;
   if (activeShape === 'garage') {
-    placing = { type: 'polygon', label: document.getElementById('bg-label').value || 'Garage', pts: GARAGE_PTS_FT, color, opacity, rotation };
+    placing = { type: 'polygon', label: document.getElementById('bg-label').value || 'Garage', pts: GARAGE_PTS_FT.map(p => [...p]), color, opacity, rotation };
+  } else if (activeShape === 'poolhouse') {
+    placing = { type: 'polygon', label: document.getElementById('bp-label').value || 'Pool House', pts: POOLHOUSE_PTS_FT.map(p => [...p]), lines: POOLHOUSE_LINES_FT.map(l => [...l]), color, opacity, rotation };
   } else {
     placing = { type: 'rect', label: document.getElementById('b-label').value || 'Building', wFt: parseFloat(document.getElementById('b-width').value)||30, dFt: parseFloat(document.getElementById('b-depth').value)||40, color, opacity, rotation };
   }
@@ -412,6 +450,14 @@ function renderPolygon(g, b, cx, cy, isSelected) {
   poly.addEventListener('mousedown', startDrag);
   poly.addEventListener('click', (e) => { e.stopPropagation(); selectBuilding(b.id); });
   g.appendChild(poly);
+  (b.lines || []).forEach(([x1, y1, x2, y2]) => {
+    const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    ln.setAttribute('x1', ox + x1*scaleF); ln.setAttribute('y1', oy + y1*scaleF);
+    ln.setAttribute('x2', ox + x2*scaleF); ln.setAttribute('y2', oy + y2*scaleF);
+    ln.setAttribute('stroke', b.color); ln.setAttribute('stroke-width', 1);
+    ln.setAttribute('stroke-dasharray', '4 3'); ln.setAttribute('pointer-events', 'none');
+    g.appendChild(ln);
+  });
 
   // Label at centroid
   const labelX = cx;
@@ -531,6 +577,7 @@ function startResizePoly(e) {
   if (!b) return;
   const sx = e.clientX, sy = e.clientY, oW = b.bbW, oH = b.bbH;
   const oPts = b.pts.map(p => [p[0], p[1]]); // snapshot current shape
+  const oLines = (b.lines || []).map(l => [...l]);
   const onMove = ev => {
     const dxFt = (ev.clientX-sx)/scale/pxPer30ft*30;
     const dyFt = (ev.clientY-sy)/scale/pxPer30ft*30;
@@ -538,6 +585,7 @@ function startResizePoly(e) {
     const scaleY = Math.max(0.5, (oH+dyFt)/oH);
     const s = (scaleX+scaleY)/2; // uniform scale
     b.pts = oPts.map(([x,y]) => [x*s, y*s]);
+    if (b.lines) b.lines = oLines.map(([x1,y1,x2,y2]) => [x1*s, y1*s, x2*s, y2*s]);
     b.bbW = oW*s; b.bbH = oH*s;
     if (b.id === selectedId) { document.getElementById('sel-width').value=b.bbW.toFixed(1); document.getElementById('sel-depth').value=b.bbH.toFixed(1); }
     renderAll();
@@ -612,6 +660,7 @@ function updateSelected() {
     const sy = (d >= 1 && Math.abs(d - b.bbH) > 0.05) ? d / b.bbH : 1;
     if (sx !== 1 || sy !== 1) {
       b.pts = b.pts.map(([x,y]) => [x*sx, y*sy]);
+      if (b.lines) b.lines = b.lines.map(([x1,y1,x2,y2]) => [x1*sx, y1*sy, x2*sx, y2*sy]);
       b.bbW *= sx; b.bbH *= sy;
     }
   } else {
