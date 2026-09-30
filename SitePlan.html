@@ -133,11 +133,11 @@
       <div class="shape-card" id="shape-poolhouse" onclick="selectShape('poolhouse')">
         <div class="sc-title">
           <svg class="shape-preview" viewBox="0 0 28 36">
-            <polygon points="8.6,1 24.5,1 24.5,35 8.6,35 8.6,30 4,30 4,10.2 8.6,10.2" fill="#1f5f8b" fill-opacity="0.4" stroke="#1f5f8b" stroke-width="1.5"/>
+            <polygon points="4,1 24.5,1 24.5,35 8.1,35 8.1,29.7 4,29.7" fill="#1f5f8b" fill-opacity="0.4" stroke="#1f5f8b" stroke-width="1.5"/>
           </svg>
           Pool House + Breezeway
         </div>
-        <div class="sc-dims">26′-8″ × 44′-2″ · 1,066 sf</div>
+        <div class="sc-dims">27′-2″ × 45′-2″ · slab outline</div>
       </div>
 
       <div id="rect-options">
@@ -162,10 +162,10 @@
         <label style="margin-top:8px;">Label</label>
         <input type="text" id="bp-label" value="Pool House">
         <div style="font-size:11px;color:#666;line-height:1.6;margin-bottom:8px;">
-          Pool house: 20′-8″ × 25′-8″ (530 sf)<br>
-          Covered rear porch: 20′-8″ × 12′-0″ (top)<br>
-          Entry porch: 20′-8″ × 6′-6″ (bottom)<br>
-          Breezeway: 6′-0″ × 25′-8″ (left side)
+          From foundation plan (slab edges):<br>
+          Rear porch slab: 27′-2″ × 12′-6″ (top)<br>
+          Pool house + 6′-0″ breezeway: 25′-8″ deep<br>
+          Entry porch slab: 21′-8″ × 7′-0″ (bottom)
         </div>
       </div>
 
@@ -287,17 +287,18 @@ let activeShape = 'rect';
 
 // L-shape polygon points in feet, relative to bounding-box top-left
 // Garage from uploaded floor plan
-// Pool house from floor plan: 20'-8" wide main block (rear porch 12'-0", enclosed 25'-8", entry porch 6'-6")
-// plus a 6'-0" breezeway along the left side of the enclosed portion
-const PH_W = 20 + 8/12, PH_BW = 6, PH_TOP = 12, PH_MID = 25 + 8/12, PH_BOT = 6.5;
+// Pool house from FOUNDATION plan (slab outline):
+// rear porch slab 27'-2" x 12'-6" (full width, incl. in front of breezeway),
+// enclosed + 6'-0" breezeway 25'-8" deep, entry porch slab 21'-8" x 7'-0". Overall 27'-2" x 45'-2".
+const PH_W = 27 + 2/12, PH_ENTRY_W = 21 + 8/12, PH_BW = 6, PH_TOP = 12.5, PH_MID = 25 + 8/12, PH_BOT = 7;
+const PH_H = PH_TOP + PH_MID + PH_BOT, PH_ENTRY_X = PH_W - PH_ENTRY_W;
 const POOLHOUSE_PTS_FT = [
-  [PH_BW, 0], [PH_BW+PH_W, 0], [PH_BW+PH_W, PH_TOP+PH_MID+PH_BOT], [PH_BW, PH_TOP+PH_MID+PH_BOT],
-  [PH_BW, PH_TOP+PH_MID], [0, PH_TOP+PH_MID], [0, PH_TOP], [PH_BW, PH_TOP]
+  [0, 0], [PH_W, 0], [PH_W, PH_H], [PH_ENTRY_X, PH_H], [PH_ENTRY_X, PH_TOP+PH_MID], [0, PH_TOP+PH_MID]
 ];
 // Interior divider lines (dashed): porch edges and the breezeway wall
 const POOLHOUSE_LINES_FT = [
-  [PH_BW, PH_TOP, PH_BW+PH_W, PH_TOP],
-  [PH_BW, PH_TOP+PH_MID, PH_BW+PH_W, PH_TOP+PH_MID],
+  [0, PH_TOP, PH_W, PH_TOP],
+  [PH_ENTRY_X, PH_TOP+PH_MID, PH_W, PH_TOP+PH_MID],
   [PH_BW, PH_TOP, PH_BW, PH_TOP+PH_MID]
 ];
 const GARAGE_PTS_FT = [[0, 0], [18.0833, 0], [18.0833, 20.25], [25.0833, 20.25], [25.0833, 40.5], [0, 40.5]];
