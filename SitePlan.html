@@ -142,6 +142,16 @@
         <div class="sc-dims">27′-2″ × 45′-2″ · slab outline</div>
       </div>
 
+      <div class="shape-card" id="shape-mainhouse" onclick="selectShape('mainhouse')">
+        <div class="sc-title">
+          <svg class="shape-preview" viewBox="0 0 28 36">
+            <polygon points="2.1,8.3 3.0,8.3 3.0,6.0 10.5,6.0 10.5,8.3 11.3,8.3 11.3,10.8 27.0,10.8 27.0,27.8 25.3,27.8 25.3,29.7 12.9,29.7 12.9,27.8 11.1,27.8 11.1,27.1 1.0,27.1 1.0,24.4 2.1,24.4" fill="#6b3fa0" fill-opacity="0.4" stroke="#6b3fa0" stroke-width="1.2"/>
+          </svg>
+          Main House
+        </div>
+        <div class="sc-dims">65′-4″ × 62′-4″ · foundation plan</div>
+      </div>
+
       <div id="rect-options">
         <label style="margin-top:8px;">Label</label>
         <input type="text" id="b-label" value="Building A">
@@ -169,6 +179,20 @@
           Breezeway (roofed): 5′-6″ × 25′-8″, left side<br>
           Open slab (hatched, no roof): 5′-6″ × 12′-6″, beside rear porch<br>
           Overall slab: 27′-2″ × 45′-2″
+        </div>
+      </div>
+
+      <div id="mainhouse-options" style="display:none">
+        <label style="margin-top:8px;">Label</label>
+        <input type="text" id="bm-label" value="Main House">
+        <div style="font-size:11px;color:#666;line-height:1.6;margin-bottom:8px;">
+          From DeGale main house foundation plan (8-24-26):<br>
+          House: 65′-4″ wide × 57′-4″ deep<br>
+          Entry #1 porch (roofed): 32′-8″ × 5′-0″, bottom<br>
+          Entry #2 porch (roofed): 8′-0″ × 8′-10″, recessed<br>
+          Rear patio (hatched, no roof): 41′-2″ × 8′-6″ + bays<br>
+          Stoop 19′-8″ × 6′-0″ and side landing 3′ × 7′ (hatched)<br>
+          Breezeway to pool house attaches on the right (6′-0″)
         </div>
       </div>
 
@@ -247,7 +271,7 @@
       <h2>How To Use</h2>
       <div class="instructions"><ol>
         <li>Calibrate scale from the survey bar.</li>
-        <li>Choose the Rectangle, L-Shape, or Pool House.</li>
+        <li>Choose the Rectangle, L-Shape, Pool House, or Main House.</li>
         <li>Click "Place on Map" then click to drop it.</li>
         <li>Drag to reposition.</li>
         <li>Select to rotate via input, slider, or map handle.</li>
@@ -310,6 +334,34 @@ const POOLHOUSE_LINES_FT = [
 ];
 // Uncovered areas (drawn hatched): [x, y, w, h] in ft
 const POOLHOUSE_OPEN_FT = [[0, 0, PH_ENTRY_X, PH_TOP]];
+// Main house from DeGale foundation plan (8-24-26). Raw coords: x from left house wall, y from top of stoop;
+// shifted +3 ft in x so the 3' side landing starts at 0. Overall 68'-4" x 62'-4" (house 65'-4" wide).
+const MH_X = 3;
+const mh = pts => pts.map(([x, y]) => [x + MH_X, y]);
+const MAINHOUSE_PTS_FT = mh([
+  [0,6],[2.25,6],[2.25,0],[21+11/12,0],[21+11/12,6],[24+2/12,6],[24+2/12,12+8/12],[65+4/12,12+8/12],
+  [65+4/12,57+4/12],[60+10/12,57+4/12],[60+10/12,62+4/12],[28+2/12,62+4/12],[28+2/12,57+4/12],
+  [23+8/12,57+4/12],[23+8/12,55+4/12],[-3,55+4/12],[-3,48+4/12],[0,48+4/12]
+]);
+const mhl = ls => ls.map(([x1,y1,x2,y2]) => [x1+MH_X, y1, x2+MH_X, y2]);
+const MAINHOUSE_LINES_FT = mhl([
+  [2.25,6,21+11/12,6],                                   // stoop / house wall
+  [0,48+4/12,0,55+4/12],                                  // side landing / house wall
+  // house wall along rear patio (with bays)
+  [24+2/12,12+8/12,24+2/12,25+2/12],[24+2/12,25+2/12,26+8/12,25+2/12],[26+8/12,25+2/12,26+8/12,21+2/12],
+  [26+8/12,21+2/12,36+8/12,21+2/12],[36+8/12,21+2/12,36+8/12,25+2/12],[36+8/12,25+2/12,52+4/12,25+2/12],
+  [52+4/12,25+2/12,52+4/12,21+2/12],[52+4/12,21+2/12,62+4/12,21+2/12],[62+4/12,21+2/12,62+4/12,25+2/12],
+  [62+4/12,25+2/12,65+4/12,25+2/12],
+  [28+2/12,57+4/12,60+10/12,57+4/12],                     // Entry #1 porch
+  [15+8/12,46.5,23+8/12,46.5],[15+8/12,46.5,15+8/12,55+4/12],[23+8/12,46.5,23+8/12,55+4/12] // Entry #2 porch
+]);
+const mho = zs => zs.map(([x,y,w,h]) => [x+MH_X, y, w, h]);
+const MAINHOUSE_OPEN_FT = mho([
+  [2.25,0,19+8/12,6],                                     // front stoop
+  [-3,48+4/12,3,7],                                       // side landing
+  [24+2/12,12+8/12,41+2/12,8.5],                          // rear patio
+  [24+2/12,21+2/12,2.5,4],[36+8/12,21+2/12,15+8/12,4],[62+4/12,21+2/12,3,4] // patio between bays
+]);
 const GARAGE_PTS_FT = [[0, 0], [18.0833, 0], [18.0833, 20.25], [25.0833, 20.25], [25.0833, 40.5], [0, 40.5]];
 
 const img = document.getElementById('survey-img');
@@ -343,6 +395,8 @@ function selectShape(s) {
   document.getElementById('rect-options').style.display = s === 'rect' ? 'block' : 'none';
   document.getElementById('garage-options').style.display = s === 'garage' ? 'block' : 'none';
   document.getElementById('shape-poolhouse').classList.toggle('active', s === 'poolhouse');
+  document.getElementById('shape-mainhouse').classList.toggle('active', s === 'mainhouse');
+  document.getElementById('mainhouse-options').style.display = s === 'mainhouse' ? 'block' : 'none';
   document.getElementById('poolhouse-options').style.display = s === 'poolhouse' ? 'block' : 'none';
 }
 
@@ -360,6 +414,8 @@ function startPlacing() {
   const rotation = parseFloat(document.getElementById('b-rotation').value) || 0;
   if (activeShape === 'garage') {
     placing = { type: 'polygon', label: document.getElementById('bg-label').value || 'Garage', pts: GARAGE_PTS_FT.map(p => [...p]), color, opacity, rotation };
+  } else if (activeShape === 'mainhouse') {
+    placing = { type: 'polygon', label: document.getElementById('bm-label').value || 'Main House', pts: MAINHOUSE_PTS_FT.map(p => [...p]), lines: MAINHOUSE_LINES_FT.map(l => [...l]), open: MAINHOUSE_OPEN_FT.map(z => [...z]), color, opacity, rotation };
   } else if (activeShape === 'poolhouse') {
     placing = { type: 'polygon', label: document.getElementById('bp-label').value || 'Pool House', pts: POOLHOUSE_PTS_FT.map(p => [...p]), lines: POOLHOUSE_LINES_FT.map(l => [...l]), open: POOLHOUSE_OPEN_FT.map(z => [...z]), color, opacity, rotation };
   } else {
@@ -462,7 +518,7 @@ function renderPolygon(g, b, cx, cy, isSelected) {
   poly.classList.add('b-poly');
   poly.dataset.id = b.id;
   poly.addEventListener('mousedown', startDrag);
-  poly.addEventListener('click', (e) => { e.stopPropagation(); selectBuilding(b.id); });
+  poly.addEventListener('click', (e) => { if (placing || measureMode) return; e.stopPropagation(); selectBuilding(b.id); });
   g.appendChild(poly);
   (b.open || []).forEach(([zx, zy, zw, zh]) => {
     const zr = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -526,7 +582,7 @@ function renderRect(g, b, cx, cy, isSelected) {
   rect.setAttribute('stroke-dasharray', isSelected ? '6 3' : 'none');
   rect.classList.add('building-rect'); rect.dataset.id = b.id;
   rect.addEventListener('mousedown', startDrag);
-  rect.addEventListener('click', (e) => { e.stopPropagation(); selectBuilding(b.id); });
+  rect.addEventListener('click', (e) => { if (placing || measureMode) return; e.stopPropagation(); selectBuilding(b.id); });
   g.appendChild(rect);
 
   const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
