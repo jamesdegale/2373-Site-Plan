@@ -123,11 +123,11 @@
       <div class="shape-card" id="shape-garage" onclick="selectShape('garage')">
         <div class="sc-title">
           <svg class="shape-preview" viewBox="0 0 28 36">
-            <polygon points="0,0 14,0 14,8 20,8 20,36 5,36 5,28 0,28" fill="#c84b00" fill-opacity="0.4" stroke="#c84b00" stroke-width="1.5"/>
+            <polygon points="3,1 18.2,1 18.2,18 24.1,18 24.1,35 3,35" fill="#c84b00" fill-opacity="0.4" stroke="#c84b00" stroke-width="1.5"/>
           </svg>
-          Garage / Cottage
+          L-Shape
         </div>
-        <div class="sc-dims">25′-1″ × 40′-6″ · L-shape from plan</div>
+        <div class="sc-dims">25′-1″ × 40′-6″ · Garage/Cottage</div>
       </div>
 
       <div id="rect-options">
@@ -221,7 +221,7 @@
       <h2>How To Use</h2>
       <div class="instructions"><ol>
         <li>Calibrate scale from the survey bar.</li>
-        <li>Choose Rectangle or Garage/Cottage shape.</li>
+        <li>Choose the Rectangle or L-Shape.</li>
         <li>Click "Place on Map" then click to drop it.</li>
         <li>Drag to reposition.</li>
         <li>Select to rotate via input, slider, or map handle.</li>
@@ -490,7 +490,7 @@ function renderRect(g, b, cx, cy, isSelected) {
 
 // ── DRAG ──
 function startDrag(e) {
-  if (placing) return;
+  if (placing || measureMode) return;
   e.stopPropagation();
   const id = parseInt(e.target.dataset.id);
   const b = buildings.find(x => x.id === id);
@@ -505,6 +505,7 @@ function startDrag(e) {
 
 // ── RESIZE RECT ──
 function startResize(e) {
+  if (placing || measureMode) return;
   e.stopPropagation();
   const id = parseInt(e.target.dataset.id);
   const b = buildings.find(x => x.id === id);
@@ -523,19 +524,22 @@ function startResize(e) {
 
 // ── RESIZE POLYGON (scale uniformly) ──
 function startResizePoly(e) {
+  if (placing || measureMode) return;
   e.stopPropagation();
   const id = parseInt(e.target.dataset.id);
   const b = buildings.find(x => x.id === id);
   if (!b) return;
   const sx = e.clientX, sy = e.clientY, oW = b.bbW, oH = b.bbH;
+  const oPts = b.pts.map(p => [p[0], p[1]]); // snapshot current shape
   const onMove = ev => {
     const dxFt = (ev.clientX-sx)/scale/pxPer30ft*30;
     const dyFt = (ev.clientY-sy)/scale/pxPer30ft*30;
     const scaleX = Math.max(0.5, (oW+dxFt)/oW);
     const scaleY = Math.max(0.5, (oH+dyFt)/oH);
     const s = (scaleX+scaleY)/2; // uniform scale
-    b.pts = GARAGE_PTS_FT.map(([x,y]) => [x*s, y*s]);
+    b.pts = oPts.map(([x,y]) => [x*s, y*s]);
     b.bbW = oW*s; b.bbH = oH*s;
+    if (b.id === selectedId) { document.getElementById('sel-width').value=b.bbW.toFixed(1); document.getElementById('sel-depth').value=b.bbH.toFixed(1); }
     renderAll();
   };
   const onUp = () => { renderAll(); updateList(); document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onUp); };
@@ -545,6 +549,7 @@ function startResizePoly(e) {
 
 // ── ROTATE ──
 function startRotate(e) {
+  if (placing || measureMode) return;
   e.stopPropagation();
   const id = parseInt(e.target.dataset.id);
   const b = buildings.find(x => x.id === id);
@@ -598,6 +603,21 @@ function updateSelected() {
   b.rotation = parseFloat(document.getElementById('sel-rotation').value)||0;
   b.color = document.getElementById('sel-color').value;
   b.opacity = parseFloat(document.getElementById('sel-opacity').value)/100;
+  const w = parseFloat(document.getElementById('sel-width').value);
+  const d = parseFloat(document.getElementById('sel-depth').value);
+  if (b.type === 'polygon') {
+    // Stretch the L-shape so its bounding box matches the entered size
+    // Ignore differences from the 1-decimal rounding shown in the fields
+    const sx = (w >= 1 && Math.abs(w - b.bbW) > 0.05) ? w / b.bbW : 1;
+    const sy = (d >= 1 && Math.abs(d - b.bbH) > 0.05) ? d / b.bbH : 1;
+    if (sx !== 1 || sy !== 1) {
+      b.pts = b.pts.map(([x,y]) => [x*sx, y*sy]);
+      b.bbW *= sx; b.bbH *= sy;
+    }
+  } else {
+    if (w >= 1) b.wFt = w;
+    if (d >= 1) b.dFt = d;
+  }
   document.getElementById('sel-rotation-slider').value = b.rotation;
   renderAll(); updateList();
 }
@@ -857,8 +877,9 @@ function loadSession(event) {
       if (Array.isArray(session.buildings)) {
         buildings = session.buildings;
         selectedId = null;
+        nextId = buildings.reduce((m, b) => Math.max(m, b.id || 0), 0) + 1;
         renderAll();
-        updateBuildingList();
+        updateList();
         document.getElementById('selected-section').style.display = 'none';
       }
 
